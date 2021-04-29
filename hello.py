@@ -14,8 +14,6 @@ class Ball():
     def display(self): 
         pg.draw.circle(self.surface, self.color, self.center, self.size)
 
-
-
 class Game():
 
     __width = 600
