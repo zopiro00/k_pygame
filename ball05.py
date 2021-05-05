@@ -16,7 +16,7 @@ BAR_SIZE = 25
 pg.init()
 pantalla = pg.display.set_mode((ANCHO,ALTO))
 
-gameOver = False
+
 
 reloj = pg.time.Clock()
 
@@ -159,9 +159,10 @@ class Game_menu():
         self.sel.actualizar()
 
 #Programa principal
-vidas = 0
+vidas = 3
 game_time = 0
-
+pierdebola = False
+gameOver = False
 
 bola = Bola(randint(40, ANCHO),
             randint(0, ALTO),
@@ -176,9 +177,11 @@ barra = Barra()
 gameM = Game_menu()
 
 
-while not gameOver :
+while not gameOver:
 
     reloj.tick(60)
+    if pierdebola:
+        pg.time.delay(500)
     #Gestión de eventos
     for event in pg.event.get():
         if event.type == pg.QUIT:
@@ -188,29 +191,32 @@ while not gameOver :
     gameM.act_sel()
     raqueta.actualizar()
     pierdebola = bola.muevete(ANCHO,ALTO)
+    
     if pierdebola:
-        vidas -= 1      
-    bola.comprueba_colision(raqueta)
+        vidas -= 1
+        if vidas == 0:
+            gameM.finjuego()
+            game_time += 1
+        else:
+            bola.x = ANCHO // 2
+            bola.y = ALTO // 2
+            bola.dibujar(pantalla)
+            raqueta.dibujar(pantalla)
+    else:
+        bola.comprueba_colision(raqueta)
     
     #Refrescar pantalla
-    pantalla.fill(NEGRO)
 
     if game_time == 0:
+        pantalla.fill(NEGRO)
         barra.render(vidas,bola.puntos)
         bola.dibujar(pantalla)
         raqueta.dibujar(pantalla)
-
-    if pierdebola:
-        pg.time.delay(500)
-
-    if vidas <= 0:
-        gameM.finjuego()
-        
-        game_time = 1
-        if game_time == 100:
-            gameOver = True
+ 
         
     pg.display.flip()
+
+pg.time.delay(1000)
 
 pg.quit()
 sys.exit()
