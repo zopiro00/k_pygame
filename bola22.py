@@ -47,12 +47,16 @@ class Raqueta(pg.sprite.Sprite):
 
     def __init__(self,x,y, w = 100,h = 30 ):
         super().__init__()
-        self.image = pg.Surface((w,h), flags = pg.SRCALPHA , depth = 32)
-        pg.draw.rect(self.image, (255,0,0), pg.Rect(0,0,w,h), border_radius=10)
-        #self.image2 = pg.image.load("images/electric00.png").convert_alpha()
+        self.image = pg.image.load("images/reagan_flag.png").convert_alpha()
         self.rect = self.image.get_rect(midbottom=(x,y))
         self.vx = 10
         self.vy = 0
+
+    def cargaImagenes(self):
+        imagenes = []
+        for fichero in fotos:
+            images.append(pg.image.load("images/{}".format(fichero)))
+        return imagenes
 
     def update(self):
         tecla_pul = pg.key.get_pressed()
