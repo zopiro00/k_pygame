@@ -1,38 +1,14 @@
 import pygame as pg
 import sys
 import random
+from enum import Enum
 
-ALTO =  800
+ALTO =  600
 ANCHO = 800
 
 TOP_BAR = 35
 
 FPS = 60
-
-class Brick(pg.sprite.Sprite):
-    def __init__(self, w, h, x = 200, y= 200, esDuro = False):
-        super().__init__()
-        self.base = pg.image.load("images/wall.png")
-        self.base_rect = self.base.get_rect()
-        self.image = pg.Surface((w,h))
-        self.rect = self.image.get_rect(topleft = (x,y))
-        self.w = w
-        self.h = h
-        self.x = x
-        self.y = y
-        self.numGolpes = 0
-        self.esDuro = esDuro
-
-    def update(self, dt): 
-        self.pattern = self.image.blit(self.base, (-self.x,-self.y,self.w,self.h))
-
-    def desaparece(self):
-        self.numGolpes += 1
-
-        return (self.numGolpes > 0 )
-
-
-
 
 class Back_rect(pg.sprite.Sprite):
     def __init__(self, h, w, x = 0,y = 0, color = (0,0,0)):
@@ -43,21 +19,116 @@ class Back_rect(pg.sprite.Sprite):
 
 
 class Marcador(pg.sprite.Sprite):
-    def __init__(self, text, x, y, fontsize = 20, color = (255,255,255)):
+    plantilla = "{}"
+
+    def __init__(self, text, x, y, justificar = "topleft", fontsize = 20, color = (255,255,255)):
         super().__init__()
         self.fuente = pg.font.SysFont("Fox Cavalier", fontsize)
         self.color = color
         self.text = text
-        self.image = self.fuente.render(str(self.text), True, self.color)
-        self.rect = self.image.get_rect(topleft = (x,y))
+        self.justificar = {justificar : (x,y)}
+        self.image = self.fuente.render(self.plantilla.format(self.text), True, self.color)
+        self.rect = self.image.get_rect(**self.justificar)
 
     def update(self, dt):
         self.image = self.fuente.render(str(self.text), True, self.color)
 
+class Ladrillo(pg.sprite.Sprite):
+    disfraces = [   "greenTile.png",
+                    "redTile.png",
+                    "redTileBreak.png"]
+
+    def __init__(self, x, y, esDuro = False):
+        super().__init__()
+        self.imagenes = self.cargaImagenes()
+        self.esDuro = esDuro
+        self.imagen_actual = 1 if self.esDuro else 0
+        self.image = self.imagenes[self.imagen_actual]
+        self.rect = self.image.get_rect(topleft= (x,y))
+        self.numGolpes = 0
+
+    def cargaImagenes(self):
+
+        imagenes = []
+        for fichero in self.disfraces:
+            imagenes.append(pg.image.load("images/{}".format(fichero)))
+        return imagenes
+
+    def update(self, dt):
+        if self.esDuro and self.numGolpes == 1:
+            self.imagen_actual = 2
+            self.image = self.imagenes[self.imagen_actual]
+
+    def desaparece(self):
+        self.numGolpes += 1
+
+        """
+        if (self.numGolpes > 0 and not self.esDuro) or (self.numGolpes > 1 and self.esDuro):
+            return True
+        else:
+            return False
+
+        Este if es sustituible por un return con la condición que queremos que se cumple.
+        """
+        return (self.numGolpes > 0 and not self.esDuro) or (self.numGolpes > 1 and self.esDuro)
+
+class Level(pg.sprite.Sprite):
+    level1 = [  [1,1,1,1,1,1,1,1],
+                [1,0,0,1,1,0,0,1],
+                [1,0,0,1,1,0,0,1],
+                [1,1,1,1,1,1,1,1]]
+
+    level2 = [  [1,1,1,1,1,1,1,1],
+                [1,1,1,1,1,1,1,1],
+                [1,1,1,1,1,1,1,1],
+                [1,1,1,1,1,1,1,1]]
+
+    level3 = [  [2,2,1,1,0,0,0,0],
+                [1,2,2,1,1,0,0,0],
+                [1,1,2,2,1,1,0,0],
+                [1,1,1,2,2,1,1,0]]
+            
+    level4 = [  [2,2,1,1,0,0,0,0],
+                [1,2,2,1,1,0,0,0],
+                [1,1,2,2,1,1,0,0],
+                [1,1,1,2,2,1,1,0],
+                [1,1,2,2,1,1,0,0],
+                [1,2,2,1,1,0,0,0]]
+
+    level_list = [level1, level2, level3]
+                
+    def __init__(self):
+        super().__init__()
+        
+    def custom_level(self, custom):
+        self.__choosen_level = custom
+
+    def create_level(self,level):
+        self.level = level
+        self.__choosen_level = self.level_list[self.level-1]
+        grupo_ladrillos = pg.sprite.Group()
+
+        for fila in range(len(self.__choosen_level)):
+            for columna in range(len(self.__choosen_level[fila])):
+                xb = 5 + 100*columna
+                yb = 5 + 40*fila
+                if self.__choosen_level[fila][columna] == 1:
+                    ladrillo = Ladrillo(xb, yb + TOP_BAR, False)
+                    grupo_ladrillos.add(ladrillo)
+                elif self.__choosen_level[fila][columna] == 2:
+                    ladrillo = Ladrillo(xb, yb + TOP_BAR, True )
+                    grupo_ladrillos.add(ladrillo)
+
+        return grupo_ladrillos
+    
+
 class Bola(pg.sprite.Sprite):
 
-    ciclo_vital = ["vivo", "muerto", "limbo", "resucito"]
-    
+    class Estado(Enum):
+        viva = 0
+        agonizando = 1
+        muerta = 2
+
     fotos = ["ball1.png",
             "ball2.png",
             "ball3.png",
@@ -81,7 +152,7 @@ class Bola(pg.sprite.Sprite):
         self.x = x
         self.y = y
         #self.estoyViva = True
-        self.estado_vital = 0
+        self.estado_vital = Bola.Estado.viva
 
         self.vx = random.randint(5,10) * random.choice([-1,1])
         self.vy = random.randint(5,10) * random.choice([-1,1])
@@ -102,7 +173,7 @@ class Bola(pg.sprite.Sprite):
 
         # Comportamiento de la bola en modo normal.
         
-        if self.estado_vital == 0:
+        if self.estado_vital == Bola.Estado.viva:
             self.rect.x += self.vx
             self.rect.y += self.vy
 
@@ -112,28 +183,30 @@ class Bola(pg.sprite.Sprite):
                 self.vy *= -1
 
             if self.rect.bottom >= ALTO:
-                self.estado_vital = 1
+                self.estado_vital = Bola.Estado.agonizando
+                self.rect.bottom = ALTO
 
         #Comportamiento de la bola si "muere" 
-        elif self.estado_vital == 1:
+        elif self.estado_vital == Bola.Estado.agonizando:
             self.milisegundos_acumulado +=dt
             if self.milisegundos_acumulado >= self.milisegundos_cambio:
                 self.imagen_actual +=1
                 if self.imagen_actual >= len(self.imagenes):
                     self.imagen_actual = 0
-                    self.estado_vital = 2
+                    self.estado_vital = Bola.Estado.muerta
                 self.milisegundos_acumulado = 0
             self.image = self.imagenes[self.imagen_actual]
 
-        elif self.estado_vital == 2:
+        elif self.estado_vital == Bola.Estado.muerta:
             self.rect.center = (self.x, self.y)
             self.vx = random.randint(5,10) * random.choice([-1,1])
             self.vy = random.randint(5,10) * random.choice([-1,1])
-            self.estado_vital = 0
+            self.estado_vital = Bola.Estado.viva
 
 class Raqueta(pg.sprite.Sprite):
-    fotos = ["reagan.png",
-            "reagan_flag.png"]
+    fotos = ["electric00.png",
+            "electric01.png",
+            "electric02.png"]
 
     def __init__(self,x,y, w = 100,h = 30 ):
         super().__init__()
@@ -185,36 +258,22 @@ class Game():
         self.vidas = 3
         self.puntuacion = 0
 
-        self.todoGroup = pg.sprite.Group()
-        self.grupo_player = pg.sprite.Group()
-        self.grupo_bricks = pg.sprite.Group()
-
-        self.ladrillo_text = Brick(90,30, 5, TOP_BAR + 5)
-        self.ladrillo_text2 = Brick(90,30, 105, TOP_BAR + 5)
-
-        for fila in range(9):
-            for columna in range(8):
-                w = 95.5
-                h = 35
-                x = 99 * columna
-                y = 40 * fila
-                ladrillo = Brick(w, h, x + 4, y + TOP_BAR + 5)
-                self.grupo_bricks.add(ladrillo) 
-
-
-        self.grupo_bricks.add(self.ladrillo_text, self.ladrillo_text2)
-
+        #Textos marcador
         self.barra = Back_rect(35, ANCHO, color= (184,19,46))
+        self.cuentaGolpes = Marcador("POINTS: {}".format(self.puntuacion), 10, 10)
+        self.cuentaVidas = Marcador("VIDAS: {}".format(self.vidas), ANCHO-10, 10, justificar = "topright")
+        self.title = Marcador("Arkanoid V2.0", ANCHO //  2, 10, justificar= "midtop")
 
-        self.cuentaGolpes = Marcador("POINTS {}".format(self.puntuacion), 10, 10)
-        self.cuentaVidas = Marcador("VIDAS: {}".format(self.vidas), 200, 10)
-        self.cuentaVidas.rect.topright = (ANCHO -10,10)
-        self.title = Marcador("Arkanoid V2.0", 10, 10)
-        self.title.rect.midtop = (ANCHO //  2, 10)
-
+        #Elementos
         self.bola = Bola(ANCHO//2, ALTO//2)
         self.raqueta = Raqueta(ANCHO // 2, ALTO - 2)
 
+        self.level = Level()
+
+        #grupos
+        self.todoGroup = pg.sprite.Group()
+        self.grupo_player = pg.sprite.Group()
+        self.grupo_bricks = self.level.create_level(1)
         
         self.todoGroup.add( self.barra,
                             self.bola,
@@ -223,7 +282,8 @@ class Game():
                             self.cuentaVidas,
                             self.title)
 
-        
+        self.todoGroup.add(self.grupo_bricks)
+
         self.grupo_player.add(self.raqueta)
 
 
@@ -254,24 +314,26 @@ class Game():
             #Modifico estado
             
             self.cuentaVidas.text = "VIDAS: {}".format(self.vidas)
-            self.cuentaGolpes.text = "VIDAS: {}".format(self.puntuacion)
             self.bola.prueba_colision(self.grupo_player)
-            self.todoGroup.update(dt)
-            self.grupo_bricks.update(dt)
             tocados = self.bola.prueba_colision(self.grupo_bricks)
             for ladrillo in tocados:
                 self.puntuacion += 5
                 if ladrillo.desaparece():
                     self.grupo_bricks.remove(ladrillo)
                     self.todoGroup.remove(ladrillo)
+                    if len(self.grupo_bricks) == 0:
+                        self.level.level += 1
+                        self.grupo_bricks = self.level.create_level(self.level.level)
+                        self.todoGroup.add(self.grupo_bricks)
 
-            if self.bola.estado_vital == 2:
+            self.todoGroup.update(dt)
+
+            if self.bola.estado_vital == self.bola.Estado.muerta:
                 self.vidas -= 1
             
             #Refresco pantalla
             self.pantalla.fill((10,10,20))
             self.todoGroup.draw(self.pantalla)
-            self.grupo_bricks.draw(self.pantalla)
 
             pg.display.flip()
 

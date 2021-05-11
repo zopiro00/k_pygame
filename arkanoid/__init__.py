@@ -1,0 +1,5 @@
+FPS = 60
+ANCHO = 800
+ALTO = 600
+
+TOP_BAR = 35
